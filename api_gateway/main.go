@@ -92,12 +92,13 @@ type LogingStruct struct {
 func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
 	uuid := uuid.NewString()
 	hostname := os.Getenv("hostname")
+	ProjectName := os.Getenv("PROJECT")
 	return LogingStruct{
 		UUID:     uuid,
 		message:  message,
 		logLavel: logLavel,
 		levelStr: levelStr,
-		project:  "name-0.0.1",
+		project:  ProjectName,
 		podName:  hostname,
 		ip:       "127.0.0.6",
 	}
