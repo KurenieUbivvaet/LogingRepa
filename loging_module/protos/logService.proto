@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package Server;
+
+option go_package = "./protos";
+
+message LogRequest{
+    string uuid = 1;
+    string message = 2;
+    int32 logLavel = 3;
+    string LavelStr = 4;
+    string project = 5;
+    string podName = 6;
+    string ip = 7;
+}
+
+message LogResponse{
+    string uuid = 1;
+    int32 LogStatus = 2;
+}
+
+service MyService{
+    rpc CreateLog (LogRequest) returns (LogResponse) {}
+}
