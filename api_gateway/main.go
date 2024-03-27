@@ -91,12 +91,16 @@ type LogingStruct struct {
 }
 
 func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
-	uuid := uuid.NewString()
+	uuid, err := uuid.NewUUID()
+	if err != nil {
+		log.Fatal("UUID v1 не сгенерирован!")
+	}
+	StrinUUID := uuid.String()
 	hostname := os.Getenv("hostname")
 	ProjectName := os.Getenv("PROJECT")
 	IpAddres := GetLocalIP().String()
 	return LogingStruct{
-		UUID:     uuid,
+		UUID:     StrinUUID,
 		message:  message,
 		logLavel: logLavel,
 		levelStr: levelStr,
