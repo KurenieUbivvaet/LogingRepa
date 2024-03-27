@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -90,13 +91,14 @@ type LogingStruct struct {
 
 func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
 	uuid := uuid.NewString()
+	hostname := os.Getenv("hostname")
 	return LogingStruct{
 		UUID:     uuid,
 		message:  message,
 		logLavel: logLavel,
 		levelStr: levelStr,
 		project:  "name-0.0.1",
-		podName:  "name-docker-container-8585d65874-ld5lq",
+		podName:  hostname,
 		ip:       "127.0.0.6",
 	}
 }
