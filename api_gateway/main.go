@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -93,6 +94,7 @@ func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
 	uuid := uuid.NewString()
 	hostname := os.Getenv("hostname")
 	ProjectName := os.Getenv("PROJECT")
+	IpAddres := GetLocalIP().String()
 	return LogingStruct{
 		UUID:     uuid,
 		message:  message,
@@ -100,6 +102,16 @@ func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
 		levelStr: levelStr,
 		project:  ProjectName,
 		podName:  hostname,
-		ip:       "127.0.0.6",
+		ip:       IpAddres,
 	}
+}
+
+func GetLocalIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	loclaAddress := conn.LocalAddr().(*net.UDPAddr)
+	return loclaAddress.IP
 }
