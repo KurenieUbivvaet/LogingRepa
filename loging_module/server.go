@@ -25,16 +25,16 @@ type server struct {
 
 func (s *server) CreateLog(ctx context.Context, in *pb.LogRequest) (*pb.LogResponse, error) {
 	status := CreateLoging(in.GetProject(), in.GetPodName(),
-		in.GetIp(), strconv.Itoa(int(in.GetLogLavel())), in.GetLavelStr(), in.GetMessage())
+		in.GetIp(), strconv.Itoa(int(in.GetLogLavel())), in.GetLavelStr(), in.GetMessage(), in.GetUuid())
 	return &pb.LogResponse{
 		Uuid:      in.GetUuid(),
 		LogStatus: int32(status),
 	}, nil
 }
 
-func CreateLoging(project, podName, ip, logLavel, lavelStr, returned string) int {
+func CreateLoging(project, podName, ip, logLavel, lavelStr, returned, uuid string) int {
 	t := time.Now()
-	serverEventDatetime := fmt.Sprintf("%d-%02d-%02d		%02d:%02d:%02d,%03d",
+	serverEventDatetime := fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d,%03d",
 		t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.UnixMilli()%1000)
 	f, err := os.OpenFile("files/loging.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -42,7 +42,7 @@ func CreateLoging(project, podName, ip, logLavel, lavelStr, returned string) int
 		os.Create("files/loging.log")
 	}
 	f.WriteString("serverEventDatetime='" + serverEventDatetime + "' project='" + project + "' podName='" + podName + "' ip=" +
-		ip + "' logLavel='" + logLavel + "' lavelStr='" + lavelStr + "' returned='" + returned + "'\n")
+		ip + "' logLavel='" + logLavel + "' lavelStr='" + lavelStr + "' returned='" + returned + "' UUID=" + uuid + "'\n")
 	defer f.Close()
 	status := 201
 	if err != nil {
