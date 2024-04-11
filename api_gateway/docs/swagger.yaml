@@ -1,0 +1,18 @@
+basePath: /
+host: localhost:8000
+info:
+  contact:
+    name: KurenieUbivvaet
+  description: Здесь по идее должен быть списочек.
+  title: Журналирование
+  version: 0.0.1
+paths:
+  /:
+    post:
+      description: ручные удалённого сервера
+      summary: Summarize your endpoint
+  /outlog:
+    post:
+      description: логи из удалённого сервера
+      summary: Summarize your endpoint
+swagger: "2.0"
