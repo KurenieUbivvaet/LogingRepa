@@ -1,9 +1,13 @@
 package main
 
 import (
+	_ "api_gateway/docs"
 	pb "api_gateway/protos"
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -13,40 +17,142 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+type Config struct {
+	GRPCHost string `json:"gRPC_host"`
+	GRPCPort int    `json:"gRPC_port"`
+	ApiHost  string `json:"api_host"`
+	ApiPort  int    `json:"api_port"`
+}
+
 var addr = flag.String("addr", "localhost:50051", "the addres to connect to")
 
+//	@title			Журналирование
+//	@version		0.0.1
+//	@description	Здесь по идее должен быть списочек.
+
+//	@contact.name	KurenieUbivvaet
+
+// @host		localhost:8000
+// @BasePath	/
 func main() {
+	configFile, err := os.Open("config/config.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer configFile.Close()
+
+	data, err := ioutil.ReadAll(configFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var config Config
+
+	jsonError := json.Unmarshal(data, &config)
+	if jsonError != nil {
+		log.Fatal(jsonError)
+	}
+
+	fmt.Println(config)
 	router := gin.Default()
-	router.LoadHTMLFiles("templates/create.html")
-
-	router.POST("/", func(c *gin.Context) {
-		message := c.PostForm("message")
-		logLev := c.PostForm("logLevel")
-		logLevel, _ := strconv.Atoi(logLev)
-		levelStr := c.PostForm("levelStr")
-		loging := CreateLoging(message, logLevel, levelStr)
-
-		var getUUID, getLogStatus = logRequest(
-			loging.UUID, loging.message,
-			loging.logLavel, loging.levelStr,
-			loging.project, loging.podName,
-			loging.ip)
-
-		c.JSON(200, gin.H{
-			"UUID":      getUUID,
-			"LogStatus": getLogStatus,
-		})
-
-	})
+	router.LoadHTMLGlob("templates/*")
+	router.POST("/", MainPost)
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "create.html", gin.H{})
 	})
 
-	router.Run()
+	router.POST("/outlog", PostOutlog)
+
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	ApiAdr := ":" + strconv.Itoa(config.ApiPort)
+	Error := router.Run(ApiAdr)
+	if Error != nil {
+		panic("[Error] failed to start Gin server due to: " + Error.Error())
+	}
+}
+
+func getInterfaceAddress(interfaces []net.Interface, interfaceName string) net.IP {
+	for _, interf := range interfaces {
+		if interf.Name == interfaceName {
+			addrs, err := interf.Addrs()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("Сетевой интерфейс: %s\n", interf.Name)
+
+			for _, add := range addrs {
+				if ip, ok := add.(*net.IPNet); ok {
+					fmt.Printf("\tIP: %v\n", ip)
+					return ip.IP
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// PostOutLog godoc
+// @Summary Summarize your endpoint
+// @Schemes
+// @Description логи из удалённого сервера
+// @Succes 200 300 400 500
+// @Router /outlog [post]
+func PostOutlog(c *gin.Context) {
+	UUID := c.PostForm("UUID")
+	massage := c.PostForm("massage")
+	logLev := c.PostForm("LogLevel")
+	logLevel, _ := strconv.Atoi(logLev)
+	levelStr := c.PostForm("levelStr")
+	Project := c.PostForm("project")
+	PodName := c.PostForm("podName")
+	Ip := c.PostForm("ip")
+	var getUUID, getLogStatus = logRequest(UUID, massage, logLevel, levelStr, Project, PodName, Ip)
+	c.JSON(200, gin.H{
+		"UUID":      getUUID,
+		"LogStatus": getLogStatus,
+	})
+}
+
+// MainPost godoc
+// @Summary Summarize your endpoint
+// @Schemes
+// @Description ручные удалённого сервера
+// @Succes 200 300 400 500
+// @Router / [post]
+func MainPost(c *gin.Context) {
+	message := c.PostForm("message")
+	logLev := c.PostForm("logLevel")
+	logLevel, _ := strconv.Atoi(logLev)
+	levelStr := c.PostForm("levelStr")
+
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		panic(err)
+	}
+
+	interfaceName := "eth0"
+	ipAddress := getInterfaceAddress(interfaces, interfaceName).String()
+
+	loging := CreateLoging(message, logLevel, levelStr)
+
+	var getUUID, getLogStatus = logRequest(
+		loging.UUID, loging.message,
+		loging.logLavel, loging.levelStr,
+		loging.project, loging.podName, ipAddress,
+	)
+
+	c.JSON(200, gin.H{
+		"UUID":      getUUID,
+		"LogStatus": getLogStatus,
+	})
+
 }
 
 func logRequest(UUID, message string, logLavel int, lavelStr, project, podName, ip string) (string, int32) {
@@ -87,7 +193,6 @@ type LogingStruct struct {
 	levelStr string
 	project  string
 	podName  string
-	ip       string
 }
 
 func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
@@ -95,27 +200,12 @@ func CreateLoging(message string, logLavel int, levelStr string) LogingStruct {
 	if err != nil {
 		log.Fatal("UUID v1 не сгенерирован!")
 	}
-	StrinUUID := uuid.String()
-	hostname := os.Getenv("hostname")
-	ProjectName := os.Getenv("PROJECT")
-	IpAddres := GetLocalIP().String()
 	return LogingStruct{
-		UUID:     StrinUUID,
+		UUID:     uuid.String(),
 		message:  message,
 		logLavel: logLavel,
 		levelStr: levelStr,
-		project:  ProjectName,
-		podName:  hostname,
-		ip:       IpAddres,
+		project:  os.Getenv("PROJECT"),
+		podName:  os.Getenv("hostname"),
 	}
-}
-
-func GetLocalIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-	loclaAddress := conn.LocalAddr().(*net.UDPAddr)
-	return loclaAddress.IP
 }

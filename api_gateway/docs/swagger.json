@@ -1,0 +1,29 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Здесь по идее должен быть списочек.",
+        "title": "Журналирование",
+        "contact": {
+            "name": "KurenieUbivvaet"
+        },
+        "version": "0.0.1"
+    },
+    "host": "localhost:8000",
+    "basePath": "/",
+    "paths": {
+        "/": {
+            "post": {
+                "description": "ручные удалённого сервера",
+                "summary": "Summarize your endpoint",
+                "responses": {}
+            }
+        },
+        "/outlog": {
+            "post": {
+                "description": "логи из удалённого сервера",
+                "summary": "Summarize your endpoint",
+                "responses": {}
+            }
+        }
+    }
+}

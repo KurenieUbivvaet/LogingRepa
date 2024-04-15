@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	port = flag.Int("port", 50051, "The server port")
+	ipAddress = flag.String("ip", " 172.17.0.3", "The server ip")
+	port      = flag.Int("port", 50051, "The server port")
 )
 
 type server struct {
@@ -25,14 +26,14 @@ type server struct {
 
 func (s *server) CreateLog(ctx context.Context, in *pb.LogRequest) (*pb.LogResponse, error) {
 	status := CreateLoging(in.GetProject(), in.GetPodName(),
-		in.GetIp(), strconv.Itoa(int(in.GetLogLavel())), in.GetLavelStr(), in.GetMessage(), in.GetUuid())
+		in.GetIp(), strconv.Itoa(int(in.GetLogLavel())), in.GetLavelStr(), in.GetMessage())
 	return &pb.LogResponse{
 		Uuid:      in.GetUuid(),
 		LogStatus: int32(status),
 	}, nil
 }
 
-func CreateLoging(project, podName, ip, logLavel, lavelStr, returned, uuid string) int {
+func CreateLoging(project, podName, ip, logLavel, lavelStr, returned string) int {
 	t := time.Now()
 	serverEventDatetime := fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d,%03d",
 		t.Year(), t.Month(), t.Day(),
@@ -41,8 +42,9 @@ func CreateLoging(project, podName, ip, logLavel, lavelStr, returned, uuid strin
 	if errors.Is(err, os.ErrNotExist) {
 		os.Create("files/loging.log")
 	}
-	f.WriteString("serverEventDatetime='" + serverEventDatetime + "' project='" + project + "' podName='" + podName + "' ip=" +
-		ip + "' logLavel='" + logLavel + "' lavelStr='" + lavelStr + "' returned='" + returned + "' UUID=" + uuid + "'\n")
+	str := fmt.Sprintf("serverEventDatetime=\"%v\" project=\"%v\" podName=\"%v\" ip=\"%v\" logLevel=\"%v\"  levelStr=\"%v\"  returned=\"%v\"\n",
+		serverEventDatetime, project, podName, ip, logLavel, lavelStr, returned)
+	f.WriteString(str)
 	defer f.Close()
 	status := 201
 	if err != nil {
@@ -53,7 +55,7 @@ func CreateLoging(project, podName, ip, logLavel, lavelStr, returned, uuid strin
 
 func main() {
 	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("%d:%d", *ipAddress, *port))
 	if err != nil {
 		log.Fatalf("Ошибка подключения: %v", err)
 	}
